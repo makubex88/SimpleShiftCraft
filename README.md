@@ -90,6 +90,4 @@ CI runs all three on every push and pull request (`.github/workflows/ci.yml`).
 
 Auth, multi-restaurant permissions, shift swaps, payroll and sales forecasting. They're out of scope for a sample, and listed in the [design docs](docs/design.html#overview).
 
-## Built with AI
 
-Built with an AI pair-programmer (Claude Code). The design decisions, trade-offs and scope are documented in the ADRs and design docs.
