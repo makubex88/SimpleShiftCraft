@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SimpleShiftCraft — Design Documentation</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c232c; --border:#30363d;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --green:#3fb950;
+    --amber:#d29922; --red:#f85149; --purple:#bc8cff;
+    --mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  .layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+  nav{position:sticky;top:0;height:100vh;overflow:auto;border-right:1px solid var(--border);padding:24px 16px;background:var(--panel)}
+  nav .brand{font-weight:700;font-size:18px;margin-bottom:4px}
+  nav .brand span{color:var(--accent)}
+  nav .ver{color:var(--muted);font-size:12px;margin-bottom:20px}
+  nav a{display:block;color:var(--muted);padding:6px 10px;border-radius:6px;font-size:14px}
+  nav a:hover,nav a.active{background:var(--panel2);color:var(--text);text-decoration:none}
+  main{padding:40px 48px;max-width:1100px}
+  section{padding-bottom:48px;margin-bottom:48px;border-bottom:1px solid var(--border)}
+  h1{font-size:34px;margin:0 0 8px}
+  h2{font-size:24px;margin:0 0 6px;display:flex;align-items:center;gap:10px}
+  h2 .num{font:600 13px var(--mono);color:var(--accent);background:#58a6ff1a;border:1px solid #58a6ff40;border-radius:6px;padding:2px 8px}
+  h3{font-size:17px;margin:28px 0 8px}
+  .lead{color:var(--muted);font-size:17px;margin:0 0 24px}
+  .sub{color:var(--muted);margin:0 0 20px}
+  .grid{display:grid;gap:16px}
+  .g2{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(3,1fr)}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+  .card h4{margin:0 0 6px;font-size:15px}
+  .card p{margin:0;color:var(--muted);font-size:14px}
+  table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-weight:600;background:var(--panel)}
+  code{font-family:var(--mono);font-size:13px;background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:1px 5px}
+  pre.code{font-family:var(--mono);font-size:13px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;overflow:auto;line-height:1.5}
+  pre.code code{background:none;border:0;padding:0}
+  .k{color:var(--purple)} .s{color:#a5d6ff} .c{color:var(--muted)} .f{color:#d2a8ff}
+  .diagram{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;overflow:auto;text-align:center}
+  pre.mermaid{margin:0;background:none}
+  .pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;border:1px solid var(--border);color:var(--muted);margin:2px 4px 2px 0}
+  .pill.g{color:var(--green);border-color:#3fb95060} .pill.a{color:var(--amber);border-color:#d2992260} .pill.r{color:var(--red);border-color:#f8514960} .pill.b{color:var(--accent);border-color:#58a6ff60}
+  ul.tight{margin:6px 0;padding-left:20px} ul.tight li{margin:3px 0}
+  .callout{border-left:3px solid var(--accent);background:#58a6ff0d;padding:10px 14px;border-radius:0 8px 8px 0;margin:14px 0;font-size:14px}
+
+  /* ---------- Mockup ---------- */
+  .app{background:#0b0f14;border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 10px 40px #0008}
+  .app-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--panel);flex-wrap:wrap}
+  .app-bar .title{font-weight:700} .app-bar .title small{color:var(--muted);font-weight:400;margin-left:8px}
+  .btns{display:flex;gap:8px}
+  button{font:inherit;font-size:13px;cursor:pointer;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text);padding:6px 12px}
+  button:hover{border-color:var(--muted)}
+  button.primary{background:#238636;border-color:#2ea043} button.primary:disabled{opacity:.45;cursor:not-allowed}
+  .app-body{display:grid;grid-template-columns:1fr 280px}
+  .board{padding:14px;overflow:auto}
+  .wk{width:100%;border-collapse:separate;border-spacing:4px;font-size:13px}
+  .wk th{background:none;border:0;padding:4px;text-align:center;font-weight:600}
+  .wk td{border:0;padding:0}
+  .wk td.name{padding:4px 8px;white-space:nowrap}
+  .wk td.name b{display:block;font-size:13px} .wk td.name span{color:var(--muted);font-size:11px}
+  .cell{width:100%;min-width:62px;height:42px;border-radius:6px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:12px;padding:0}
+  .cell.off-day{background:repeating-linear-gradient(45deg,#ffffff06 0 6px,transparent 6px 12px)}
+  .cell.AM{background:#1f6feb33;border:1px solid #1f6feb;color:#a5d6ff}
+  .cell.PM{background:#8957e533;border:1px solid #8957e5;color:#d2a8ff}
+  .cell.bad{box-shadow:0 0 0 2px var(--red) inset}
+  .wk td.num{text-align:right;padding:4px 8px;font-variant-numeric:tabular-nums;color:var(--muted)}
+  .wk td.num.over{color:var(--red);font-weight:600}
+  .cov{font-size:11px;text-align:center;color:var(--muted);line-height:1.3}
+  .cov .ok{color:var(--green)} .cov .no{color:var(--red)}
+  .side{border-left:1px solid var(--border);padding:14px;background:var(--panel)}
+  .meter{height:8px;border-radius:99px;background:var(--panel2);overflow:hidden;margin:6px 0 4px}
+  .meter i{display:block;height:100%;background:var(--green);transition:width .25s}
+  .meter.warn i{background:var(--amber)} .meter.over i{background:var(--red)}
+  .stat{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+  .stat b{color:var(--text);font-variant-numeric:tabular-nums}
+  .issues{list-style:none;margin:10px 0 0;padding:0;max-height:300px;overflow:auto}
+  .issues li{font-size:12.5px;padding:8px 10px;border-radius:6px;margin-bottom:6px;background:var(--panel2);border-left:3px solid var(--red)}
+  .issues li.warn{border-left-color:var(--amber)}
+  .issues li.none{border-left-color:var(--green);color:var(--green)}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--muted);padding:0 14px 12px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#238636;color:#fff;padding:10px 18px;border-radius:8px;opacity:0;transition:.3s;font-size:14px;z-index:9}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr} nav{position:static;height:auto}
+    main{padding:24px 18px} .g2,.g3{grid-template-columns:1fr} .app-body{grid-template-columns:1fr}
+    .side{border-left:0;border-top:1px solid var(--border)}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav>
+  <div class="brand">SimpleShift<span>Craft</span></div>
+  <div class="ver">Design docs · v0.4</div>
+  <a href="#overview">1. Overview</a>
+  <a href="#architecture">2. Architecture</a>
+  <a href="#data">3. Data management</a>
+  <a href="#erd">4. Data diagram</a>
+  <a href="#ux">5. UI / UX</a>
+  <a href="#mockup">6. Interactive mockup</a>
+  <a href="#flow">7. Flowcharts</a>
+  <a href="#testing">8. Testing</a>
+  <a href="#delivery">9. Delivery plan</a>
+</nav>
+
+<main>
+<!-- ============ 1. OVERVIEW ============ -->
+<section id="overview">
+  <h1>SimpleShiftCraft</h1>
+  <p class="lead">A small restaurant shift scheduler. It helps a manager build a weekly labor plan that balances <b>profitability</b>, <b>staff predictability</b> and <b>guest coverage</b>, and it explains every problem in plain English.</p>
+
+  <div class="grid g3">
+    <div class="card"><h4>💰 Profitability</h4><p>Weekly labor cost is tracked live against a budget the manager sets.</p></div>
+    <div class="card"><h4>📅 Predictability</h4><p>Respects availability and max hours, and blocks "clopening" (closing late, then opening early).</p></div>
+    <div class="card"><h4>🍽️ Coverage</h4><p>Every service window shows the staff it needs, so gaps are obvious before publishing.</p></div>
+  </div>
+
+  <h3>Scope</h3>
+  <div class="grid g2">
+    <div class="card"><h4>In scope (v0.1)</h4>
+      <ul class="tight"><li>Staff, availability, weekly schedule</li><li>Auto-fill draft schedule</li><li>Conflict detection (5 rules)</li><li>REST + GraphQL API, Postgres</li><li>One-page React week grid</li></ul></div>
+    <div class="card"><h4>Out of scope (on purpose)</h4>
+      <ul class="tight"><li>Auth / multi-tenant permissions</li><li>Payroll, time clock, shift swaps</li><li>Sales forecasting (budget is entered by hand)</li><li>Mobile app</li></ul></div>
+  </div>
+
+  <h3>Tech at a glance</h3>
+  <span class="pill b">TypeScript (strict)</span><span class="pill b">Node.js</span><span class="pill b">REST</span><span class="pill b">GraphQL (graphql-yoga)</span><span class="pill b">PostgreSQL 16</span><span class="pill">DynamoDB-ready repository</span><span class="pill b">React + Vite</span><span class="pill b">Vitest</span><span class="pill b">Docker Compose</span><span class="pill b">GitHub Actions</span>
+</section>
+
+<!-- ============ 2. ARCHITECTURE ============ -->
+<section id="architecture">
+  <h2><span class="num">02</span>Architecture</h2>
+  <p class="sub">A layered monolith: one deployable API with two thin transport layers over a single domain core. Simple to run, easy to split later.</p>
+
+  <div class="diagram"><pre class="mermaid">
+flowchart LR
+  subgraph Browser
+    UI["React week grid"]
+  end
+  subgraph API["api · Node + TypeScript"]
+    REST["REST  /api/*"]
+    GQL["GraphQL  /graphql"]
+    SVC["ScheduleService (use cases)"]
+    DOM["domain/scheduler.ts (pure functions)"]
+    REPO["ShiftRepository (interface)"]
+  end
+  PG[("PostgreSQL")]
+  DDB[("DynamoDB adapter (optional)")]
+  UI -- "reads (one query per screen)" --> GQL
+  UI -- "writes (commands)" --> REST
+  REST --> SVC
+  GQL --> SVC
+  SVC --> DOM
+  SVC --> REPO
+  REPO --> PG
+  REPO -.-> DDB
+  </pre></div>
+
+  <h3>Layers</h3>
+  <table>
+    <tr><th>Layer</th><th>File(s)</th><th>Responsibility</th><th>Depends on</th></tr>
+    <tr><td>Transport</td><td><code>rest.ts</code>, <code>graphql.ts</code></td><td>Parse and validate input (zod), map errors to HTTP or GraphQL</td><td>Service</td></tr>
+    <tr><td>Service</td><td><code>scheduleService.ts</code></td><td>Use cases: <i>autoFill</i>, <i>assignShift</i>, <i>publish</i></td><td>Domain, Repository</td></tr>
+    <tr><td>Domain</td><td><code>scheduler.ts</code></td><td>Pure rules: conflicts, auto-fill, cost. No I/O, so it's 100% unit-testable</td><td>nothing</td></tr>
+    <tr><td>Data</td><td><code>pgRepository.ts</code></td><td>SQL queries behind the <code>ShiftRepository</code> interface</td><td>pg</td></tr>
+  </table>
+
+  <h3>Why both REST and GraphQL?</h3>
+  <div class="grid g2">
+    <div class="card"><h4>GraphQL for reads</h4><p>The week view needs staff, availability, shifts and issues in one round trip. One query replaces four REST calls, and the client asks only for the fields it shows.</p></div>
+    <div class="card"><h4>REST for writes</h4><p>Commands like <code>POST /schedules/:id/publish</code> are simple, cacheable at the edge, idempotent where it matters, and easy for third-party integrations.</p></div>
+  </div>
+  <p class="callout">Both layers call the <b>same</b> service functions, so business rules live in exactly one place. Recorded in <code>docs/adr/001-rest-and-graphql.md</code>. Writes use one idempotent <code>PUT</code> per grid cell, so a retried request can't double-book anyone.</p>
+
+  <h3>API surface</h3>
+  <div class="grid g2">
+<pre class="code"><code><span class="c"># REST</span>
+GET  /api/schedules/:id
+PUT  /api/schedules/:id/assignments  <span class="c">{ employeeId, day, slot | null }</span>
+POST /api/schedules/:id/auto-fill
+POST /api/schedules/:id/publish      <span class="c">409 if blocking issues</span></code></pre>
+<pre class="code"><code><span class="k">query</span> <span class="f">Week</span>($id: ID!) {
+  schedule(id: $id) {
+    weekStart  laborCostCents  budgetCents
+    employees { id name role maxHours }
+    shifts    { id day slot employee { id } }
+    issues    { severity rule message }
+  }
+}</code></pre>
+  </div>
+</section>
+
+<!-- ============ 3. DATA MANAGEMENT ============ -->
+<section id="data">
+  <h2><span class="num">03</span>Data management</h2>
+  <p class="sub">PostgreSQL is the system of record. Access goes through one interface, so the storage engine can be swapped.</p>
+
+  <h3>Principles</h3>
+  <table>
+    <tr><th>Decision</th><th>Why</th></tr>
+    <tr><td>Money stored as <b>integer cents</b></td><td>No floating-point rounding errors in labor cost</td></tr>
+    <tr><td>Times stored as <code>timestamptz</code> (UTC) + restaurant <code>timezone</code></td><td>Daylight-saving changes don't break the 10-hour rest rule</td></tr>
+    <tr><td>Plain SQL migrations (<code>migrations/001_init.sql</code>)</td><td>Readable and reviewable, no ORM magic</td></tr>
+    <tr><td>DB constraints back up domain rules</td><td><code>UNIQUE(employee_id, starts_at)</code> stops double-booking even if the API has a bug</td></tr>
+    <tr><td>Issues are <b>computed, not stored</b></td><td>They're always fresh and there's no sync bug. They're cheap to compute (≈ 50 staff × 14 shifts)</td></tr>
+    <tr><td>Published schedules are immutable</td><td>Edits create a new version, so staff can trust what they saw</td></tr>
+  </table>
+
+  <h3>Repository interface</h3>
+<pre class="code"><code><span class="k">export interface</span> <span class="f">ShiftRepository</span> {
+  getWeek(scheduleId: <span class="k">string</span>): Promise&lt;Week | <span class="k">null</span>&gt;;
+  setShift(scheduleId: <span class="k">string</span>, a: { employeeId, day, slot | <span class="k">null</span> }): Promise&lt;<span class="k">void</span>&gt;; <span class="c">// idempotent</span>
+  replaceShifts(scheduleId: <span class="k">string</span>, shifts: Assignment[]): Promise&lt;<span class="k">void</span>&gt;;  <span class="c">// one transaction</span>
+  publish(scheduleId: <span class="k">string</span>): Promise&lt;<span class="k">void</span>&gt;;
+}</code></pre>
+
+  <h3>Request lifecycle: auto-fill</h3>
+  <div class="diagram"><pre class="mermaid">
+sequenceDiagram
+  autonumber
+  participant UI as React UI
+  participant R as REST
+  participant S as ScheduleService
+  participant D as scheduler.ts
+  participant DB as PostgreSQL
+  UI->>R: POST /schedules/42/auto-fill
+  R->>S: autoFill("42")
+  S->>DB: getWeek (staff, availability, rules)
+  DB-->>S: WeekData
+  S->>D: autoFill(week)  pure
+  D-->>S: shifts + issues
+  S->>DB: replaceShifts (BEGIN ... COMMIT)
+  S-->>R: draft
+  R-->>UI: 200 { shifts, issues, laborCostCents }
+  </pre></div>
+
+  <h3>If we moved to DynamoDB (single-table design)</h3>
+  <table>
+    <tr><th>Access pattern</th><th>PK</th><th>SK</th></tr>
+    <tr><td>Get a week (staff + shifts)</td><td><code>REST#&lt;id&gt;#WEEK#2026-11-02</code></td><td><code>SHIFT#&lt;day&gt;#&lt;slot&gt;#&lt;emp&gt;</code></td></tr>
+    <tr><td>Staff list</td><td><code>REST#&lt;id&gt;</code></td><td><code>EMP#&lt;empId&gt;</code></td></tr>
+    <tr><td>One employee's shifts (GSI1)</td><td><code>EMP#&lt;empId&gt;</code></td><td><code>&lt;startsAt ISO&gt;</code></td></tr>
+  </table>
+  <p class="sub" style="font-size:13px">This is only a design note. Postgres stays the default because the scheduling rules are relational (joins between availability, shifts and staff).</p>
+</section>
+
+<!-- ============ 4. ERD ============ -->
+<section id="erd">
+  <h2><span class="num">04</span>Data diagram</h2>
+  <p class="sub">Six tables. <code>shift.employee_id</code> is nullable, so an open (unfilled) shift is a first-class row.</p>
+  <div class="diagram"><pre class="mermaid">
+erDiagram
+  RESTAURANT ||--o{ EMPLOYEE : employs
+  RESTAURANT ||--o{ COVERAGE_RULE : requires
+  RESTAURANT ||--o{ SCHEDULE : plans
+  SCHEDULE ||--o{ SHIFT : contains
+  EMPLOYEE ||--o{ AVAILABILITY : declares
+  EMPLOYEE |o--o{ SHIFT : "works"
+  RESTAURANT {
+    uuid id PK
+    text name
+    text timezone
+  }
+  EMPLOYEE {
+    uuid id PK
+    uuid restaurant_id FK
+    text name
+    text role
+    int hourly_rate_cents
+    int max_weekly_hours
+    bool active
+  }
+  AVAILABILITY {
+    uuid id PK
+    uuid employee_id FK
+    smallint weekday
+    bool available
+  }
+  COVERAGE_RULE {
+    uuid id PK
+    uuid restaurant_id FK
+    smallint weekday
+    text slot
+    smallint min_staff
+  }
+  SCHEDULE {
+    uuid id PK
+    uuid restaurant_id FK
+    date week_start
+    int budget_cents
+    text status
+    int version
+  }
+  SHIFT {
+    uuid id PK
+    uuid schedule_id FK
+    uuid employee_id FK
+    timestamptz starts_at
+    timestamptz ends_at
+    text slot
+  }
+  </pre></div>
+  <div class="grid g3" style="margin-top:16px">
+    <div class="card"><h4>Indexes</h4><p><code>shift(schedule_id)</code>, <code>shift(employee_id, starts_at)</code> UNIQUE</p></div>
+    <div class="card"><h4>Checks</h4><p><code>ends_at &gt; starts_at</code>, <code>status IN ('draft','published')</code></p></div>
+    <div class="card"><h4>Seed data</h4><p>1 restaurant, 5 staff, 1 week, so the app looks real on first run</p></div>
+  </div>
+</section>
+
+<!-- ============ 5. UX ============ -->
+<section id="ux">
+  <h2><span class="num">05</span>UI / UX</h2>
+  <p class="sub">Designed for a busy manager doing the schedule on a Sunday night between services.</p>
+
+  <h3>Personas</h3>
+  <div class="grid g2">
+    <div class="card"><h4>👩‍🍳 Dana, general manager</h4><p><b>Goal:</b> publish next week's schedule in under 10 minutes without going over budget.<br><b>Pain:</b> spreadsheets don't warn her when someone is double-booked or will hit overtime.</p></div>
+    <div class="card"><h4>🧑‍🍳 Maria, server</h4><p><b>Goal:</b> know her shifts early and never get a "close then open".<br><b>Pain:</b> last-minute changes and schedules that ignore her days off.</p></div>
+  </div>
+
+  <h3>Design principles</h3>
+  <table>
+    <tr><th>Principle</th><th>How it shows up</th></tr>
+    <tr><td><b>One screen, one job</b></td><td>The whole week is visible at once, with staff in rows and days in columns. No modals for normal edits</td></tr>
+    <tr><td><b>Fast by default</b></td><td>Click a cell to cycle Off → AM → PM. "Auto-fill" builds a draft in one click</td></tr>
+    <tr><td><b>Explain, don't just block</b></td><td>Every issue is a human sentence with names and times, not an error code</td></tr>
+    <tr><td><b>Errors vs warnings</b></td><td><span class="pill r">error</span> blocks publishing (staff are harmed). <span class="pill a">warning</span> lets the manager decide (going over budget can be a fair business call)</td></tr>
+    <tr><td><b>Accessible</b></td><td>AM and PM differ by label, not just colour. Cells are real <code>&lt;button&gt;</code>s, so they work with a keyboard. Contrast is WCAG AA</td></tr>
+  </table>
+
+  <h3>Issue copy (examples)</h3>
+  <table>
+    <tr><th>Rule</th><th>Severity</th><th>Message shown</th></tr>
+    <tr><td>Availability</td><td><span class="pill r">error</span></td><td>"Aoife isn't available on Mon."</td></tr>
+    <tr><td>Clopening</td><td><span class="pill r">error</span></td><td>"Liam closes Tue 23:00 and opens Wed 07:00, which is only 8h rest (min 10h)."</td></tr>
+    <tr><td>Max hours</td><td><span class="pill r">error</span></td><td>"Maria is at 40h this week (max 32h)."</td></tr>
+    <tr><td>Coverage</td><td><span class="pill a">warning</span></td><td>"Fri PM needs 2 people, has 1."</td></tr>
+    <tr><td>Budget</td><td><span class="pill a">warning</span></td><td>"Labor is €2,240, which is €90 over budget."</td></tr>
+  </table>
+</section>
+
+<!-- ============ 6. MOCKUP ============ -->
+<section id="mockup">
+  <h2><span class="num">06</span>Interactive mockup</h2>
+  <p class="sub">A working prototype of the main screen, using the same rules as <code>scheduler.ts</code>. <b>Try it:</b> click cells to cycle Off → AM → PM, then press <b>Auto-fill</b>. The seed week starts with a few deliberate problems.</p>
+
+  <div class="app">
+    <div class="app-bar">
+      <div class="title">The Copper Pot · Week of 2 Nov 2026 <small id="status">Draft</small></div>
+      <div class="btns">
+        <button id="btnClear">Clear</button>
+        <button id="btnAuto">✨ Auto-fill</button>
+        <button id="btnPublish" class="primary">Publish</button>
+      </div>
+    </div>
+    <div class="app-body">
+      <div>
+        <div class="board"><table class="wk" id="grid"></table></div>
+        <div class="legend">
+          <span><i style="background:#1f6feb33;border:1px solid #1f6feb"></i>AM 07:00–15:00</span>
+          <span><i style="background:#8957e533;border:1px solid #8957e5"></i>PM 15:00–23:00</span>
+          <span><i style="background:repeating-linear-gradient(45deg,#ffffff22 0 3px,transparent 3px 6px)"></i>Unavailable</span>
+          <span><i style="box-shadow:0 0 0 2px var(--red) inset"></i>Has an issue</span>
+        </div>
+      </div>
+      <aside class="side">
+        <div class="stat"><span>Labor cost</span><b id="cost">€0</b></div>
+        <div class="meter" id="meter"><i id="meterBar"></i></div>
+        <div class="stat"><span>Budget</span><b id="budget">€0</b></div>
+        <div class="stat" style="margin-top:8px"><span>Total hours</span><b id="hours">0</b></div>
+        <h4 style="margin:16px 0 0;font-size:14px">Issues <span id="issueCount" class="pill"></span></h4>
+        <ul class="issues" id="issues"></ul>
+      </aside>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+</section>
+
+<!-- ============ 7. FLOWCHARTS ============ -->
+<section id="flow">
+  <h2><span class="num">07</span>Flowcharts</h2>
+
+  <h3>Auto-fill algorithm (greedy, explainable)</h3>
+  <p class="sub">This is a deliberately simple greedy pass. It's predictable and easy to explain to a manager, and it runs in O(slots × staff). A constraint solver can replace it later behind the same function signature.</p>
+  <div class="diagram"><pre class="mermaid">
+flowchart TD
+  A(["Manager clicks Auto-fill"]) --> B["Load staff, availability, coverage rules"]
+  B --> C{"Next open slot? (Mon to Sun, AM then PM)"}
+  C -- no --> Z["Run conflict check"] --> Z2(["Return draft + issues"])
+  C -- yes --> D["Candidates = all active staff"]
+  D --> E["Remove: unavailable that day"]
+  E --> F["Remove: already working that day"]
+  F --> G["Remove: would exceed max hours"]
+  G --> H["Remove: less than 10h rest (clopening)"]
+  H --> I{"Anyone left?"}
+  I -- no --> J["Leave slot open (coverage warning)"] --> C
+  I -- yes --> K["Pick fewest hours so far (tie: lowest rate)"]
+  K --> L["Assign shift"] --> C
+  </pre></div>
+
+  <h3>Schedule lifecycle</h3>
+  <div class="diagram"><pre class="mermaid">
+stateDiagram-v2
+  [*] --> Draft
+  Draft --> Draft: edit / auto-fill
+  Draft --> Published: publish (no errors)
+  Draft --> Draft: publish blocked (409, has errors)
+  Published --> Draft: "edit" creates version n+1
+  Published --> [*]: week ends
+  </pre></div>
+</section>
+
+<!-- ============ 8. TESTING ============ -->
+<section id="testing">
+  <h2><span class="num">08</span>Testing</h2>
+  <p class="sub">The rules live in pure functions, so most tests are plain input → output with no mocks and no database. A single smoke test checks that everything is wired together.</p>
+
+  <div class="grid g3">
+    <div class="card"><h4>Unit · ~10 tests</h4><p><code>scheduler.test.ts</code> covers each rule and auto-fill. Runs in &lt;1s.</p></div>
+    <div class="card"><h4>API smoke · 3 tests</h4><p><code>api.test.ts</code> hits REST + GraphQL against the in-memory repository.</p></div>
+    <div class="card"><h4>CI</h4><p>GitHub Actions runs lint, typecheck and tests on every PR.</p></div>
+  </div>
+
+  <h3>Test cases</h3>
+  <table>
+    <tr><th>#</th><th>Given</th><th>Expect</th></tr>
+    <tr><td>1</td><td>Shift on an unavailable day</td><td><code>availability</code> error</td></tr>
+    <tr><td>2</td><td>PM Tue + AM Wed for same person</td><td><code>clopen</code> error (8h rest)</td></tr>
+    <tr><td>3</td><td>5 × 8h shifts, max 32h</td><td><code>maxHours</code> error</td></tr>
+    <tr><td>4</td><td>Fri PM needs 2, has 1</td><td><code>coverage</code> warning</td></tr>
+    <tr><td>5</td><td>Cost above budget</td><td><code>budget</code> warning</td></tr>
+    <tr><td>6</td><td>Seed week → <code>autoFill()</code></td><td>Zero errors, all slots filled</td></tr>
+    <tr><td>7</td><td>Publish with errors (API)</td><td>HTTP 409</td></tr>
+  </table>
+
+  <h3>What a test looks like</h3>
+<pre class="code"><code><span class="k">import</span> { describe, it, expect } <span class="k">from</span> <span class="s">'vitest'</span>;
+<span class="k">import</span> { findIssues, autoFill } <span class="k">from</span> <span class="s">'./scheduler'</span>;
+<span class="k">import</span> { seedWeek } <span class="k">from</span> <span class="s">'./fixtures'</span>;
+
+describe(<span class="s">'findIssues'</span>, () =&gt; {
+  it(<span class="s">'flags a clopening shift'</span>, () =&gt; {
+    <span class="k">const</span> week = seedWeek({ shifts: [
+      { emp: <span class="s">'liam'</span>, day: <span class="s">'Tue'</span>, slot: <span class="s">'PM'</span> },
+      { emp: <span class="s">'liam'</span>, day: <span class="s">'Wed'</span>, slot: <span class="s">'AM'</span> },
+    ]});
+    expect(findIssues(week)).toContainEqual(
+      expect.objectContaining({ rule: <span class="s">'clopen'</span>, severity: <span class="s">'error'</span> })
+    );
+  });
+});
+
+describe(<span class="s">'autoFill'</span>, () =&gt; {
+  it(<span class="s">'produces a week with no errors'</span>, () =&gt; {
+    <span class="k">const</span> result = autoFill(seedWeek());
+    expect(result.issues.filter(i =&gt; i.severity === <span class="s">'error'</span>)).toEqual([]);
+  });
+});</code></pre>
+
+<pre class="code"><code><span class="c"># .github/workflows/ci.yml</span>
+<span class="k">on</span>: [push, pull_request]
+<span class="k">jobs</span>:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run lint &amp;&amp; npm run typecheck &amp;&amp; npm test</code></pre>
+</section>
+
+<!-- ============ 9. DELIVERY ============ -->
+<section id="delivery" style="border-bottom:0">
+  <h2><span class="num">09</span>Delivery plan</h2>
+  <p class="sub">Shipped in small, usable steps. Each milestone is one reviewed PR with a changelog entry.</p>
+  <table>
+    <tr><th>Release</th><th>What ships</th><th>User value</th></tr>
+    <tr><td><span class="pill g">v0.1</span></td><td>Schema, seed data, <code>findIssues()</code> + tests</td><td>Rules are proven before any UI exists</td></tr>
+    <tr><td><span class="pill g">v0.2</span></td><td>REST + GraphQL endpoints, CI</td><td>A working, documented API</td></tr>
+    <tr><td><span class="pill g">v0.3</span></td><td>React week grid + live issues</td><td>The manager can build a week by hand</td></tr>
+    <tr><td><span class="pill g">v0.4</span></td><td><code>autoFill()</code> + budget meter</td><td>A draft schedule in one click</td></tr>
+    <tr><td><span class="pill">next</span></td><td>Publish + versioning, staff notifications</td><td>Staff trust what they see</td></tr>
+  </table>
+  <p class="sub" style="margin-top:24px;font-size:13px">Quick start: <code>docker compose up</code> → <a>http://localhost:5173</a> · API on <code>:4000</code> · GraphiQL at <code>/graphql</code></p>
+</section>
+</main>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { background: '#161b22', primaryColor: '#1c232c', primaryBorderColor: '#58a6ff', lineColor: '#8b949e', fontSize: '14px' } });
+</script>
+
+<script>
+/* ===== Interactive mockup: mirrors the rules in domain/scheduler.ts ===== */
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const SHIFT_H = 8, MIN_REST = 10;
+const SLOT_TIME = { AM:[7,15], PM:[15,23] };
+const BUDGET = 215000; // cents
+const NEED = DAYS.map((d,i) => ({ AM:1, PM: (i===4||i===5) ? 2 : 1 }));
+const STAFF = [
+  { id:'maria', name:'Maria', role:'Server',    rate:1500, max:32, off:[6] },
+  { id:'liam',  name:'Liam',  role:'Cook',      rate:1800, max:40, off:[] },
+  { id:'aoife', name:'Aoife', role:'Host',      rate:1400, max:24, off:[0,1] },
+  { id:'sean',  name:'Sean',  role:'Bartender', rate:1600, max:40, off:[] },
+  { id:'priya', name:'Priya', role:'Cook',      rate:1800, max:30, off:[] },
+];
+let plan = {};
+const empty = () => Object.fromEntries(STAFF.map(s => [s.id, Array(7).fill(null)]));
+const eur = c => '€' + Math.round(c/100).toLocaleString('en-IE');
+const hoursOf = id => plan[id].filter(Boolean).length * SHIFT_H;
+const cost = () => STAFF.reduce((t,s) => t + hoursOf(s.id) * s.rate, 0);
+
+function restGap(prevSlot, nextSlot){ // hours between shift on day d and day d+1
+  return (24 - SLOT_TIME[prevSlot][1]) + SLOT_TIME[nextSlot][0];
+}
+
+function findIssues(){
+  const out = [], bad = new Set();
+  for (const s of STAFF){
+    const row = plan[s.id];
+    row.forEach((slot,d) => {
+      if (!slot) return;
+      if (s.off.includes(d)){ out.push({sev:'error', msg:`${s.name} isn't available on ${DAYS[d]}.`}); bad.add(s.id+d); }
+      const next = row[d+1];
+      if (next && d < 6){
+        const gap = restGap(slot, next);
+        if (gap < MIN_REST){
+          out.push({sev:'error', msg:`${s.name} closes ${DAYS[d]} 23:00 and opens ${DAYS[d+1]} 07:00, which is only ${gap}h rest (min ${MIN_REST}h).`});
+          bad.add(s.id+d); bad.add(s.id+(d+1));
+        }
+      }
+    });
+    const h = hoursOf(s.id);
+    if (h > s.max){ out.push({sev:'error', msg:`${s.name} is at ${h}h this week (max ${s.max}h).`}); row.forEach((x,d)=> x && bad.add(s.id+d)); }
+  }
+  DAYS.forEach((day,d) => ['AM','PM'].forEach(slot => {
+    const have = STAFF.filter(s => plan[s.id][d] === slot).length;
+    if (have < NEED[d][slot]) out.push({sev:'warn', msg:`${day} ${slot} needs ${NEED[d][slot]} ${NEED[d][slot]>1?'people':'person'}, has ${have}.`});
+  }));
+  const c = cost();
+  if (c > BUDGET) out.push({sev:'warn', msg:`Labor is ${eur(c)}, which is ${eur(c-BUDGET)} over budget.`});
+  return { out, bad };
+}
+
+function autoFill(){
+  plan = empty();
+  DAYS.forEach((_,d) => ['AM','PM'].forEach(slot => {
+    for (let n = 0; n < NEED[d][slot]; n++){
+      const cands = STAFF.filter(s =>
+        !s.off.includes(d) &&
+        !plan[s.id][d] &&
+        hoursOf(s.id) + SHIFT_H <= s.max &&
+        !(slot === 'AM' && d > 0 && plan[s.id][d-1] && restGap(plan[s.id][d-1], 'AM') < MIN_REST)
+      ).sort((a,b) => hoursOf(a.id) - hoursOf(b.id) || a.rate - b.rate);
+      if (cands[0]) plan[cands[0].id][d] = slot;
+    }
+  }));
+}
+
+function render(){
+  const { out, bad } = findIssues();
+  const g = document.getElementById('grid');
+  let html = '<tr><th></th>' + DAYS.map(d => `<th>${d}</th>`).join('') + '<th>Hours</th><th>Cost</th></tr>';
+  for (const s of STAFF){
+    const h = hoursOf(s.id);
+    html += `<tr><td class="name"><b>${s.name}</b><span>${s.role} · €${s.rate/100}/h</span></td>`;
+    plan[s.id].forEach((slot,d) => {
+      const cls = ['cell', slot||'', s.off.includes(d)?'off-day':'', bad.has(s.id+d)?'bad':''].join(' ');
+      const label = slot || (s.off.includes(d) ? 'n/a' : '+');
+      html += `<td><button class="${cls}" data-e="${s.id}" data-d="${d}" aria-label="${s.name} ${DAYS[d]}: ${slot||'off'}">${label}</button></td>`;
+    });
+    html += `<td class="num ${h>s.max?'over':''}">${h}/${s.max}</td><td class="num">${eur(h*s.rate)}</td></tr>`;
+  }
+  html += '<tr><td class="name"><span>Coverage</span></td>' + DAYS.map((_,d) => {
+    const c = sl => { const have = STAFF.filter(s=>plan[s.id][d]===sl).length; return `<span class="${have>=NEED[d][sl]?'ok':'no'}">${sl} ${have}/${NEED[d][sl]}</span>`; };
+    return `<td class="cov">${c('AM')}<br>${c('PM')}</td>`;
+  }).join('') + '<td></td><td></td></tr>';
+  g.innerHTML = html;
+
+  const c = cost(), pct = c / BUDGET * 100;
+  document.getElementById('cost').textContent = eur(c);
+  document.getElementById('budget').textContent = eur(BUDGET);
+  document.getElementById('hours').textContent = STAFF.reduce((t,s)=>t+hoursOf(s.id),0) + 'h';
+  const m = document.getElementById('meter');
+  m.className = 'meter' + (pct > 100 ? ' over' : pct > 90 ? ' warn' : '');
+  document.getElementById('meterBar').style.width = Math.min(pct,100) + '%';
+
+  const errors = out.filter(i => i.sev === 'error').length;
+  const list = document.getElementById('issues');
+  list.innerHTML = out.length
+    ? out.sort((a,b) => (a.sev==='error'?-1:1) - (b.sev==='error'?-1:1)).map(i => `<li class="${i.sev}">${i.sev==='error'?'⛔':'⚠️'} ${i.msg}</li>`).join('')
+    : '<li class="none">✅ No issues. Ready to publish.</li>';
+  const ic = document.getElementById('issueCount');
+  ic.textContent = `${errors} errors · ${out.length-errors} warnings`;
+  ic.className = 'pill ' + (errors ? 'r' : out.length ? 'a' : 'g');
+  const pub = document.getElementById('btnPublish');
+  pub.disabled = errors > 0;
+  pub.title = errors ? 'Fix errors before publishing' : '';
+}
+
+function toast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2200); }
+
+document.getElementById('grid').addEventListener('click', e => {
+  const b = e.target.closest('button.cell'); if (!b) return;
+  const row = plan[b.dataset.e], d = +b.dataset.d;
+  row[d] = row[d] === null ? 'AM' : row[d] === 'AM' ? 'PM' : null;
+  document.getElementById('status').textContent = 'Draft · unsaved';
+  render();
+});
+document.getElementById('btnAuto').onclick = () => { autoFill(); render(); toast('Draft built by auto-fill'); };
+document.getElementById('btnClear').onclick = () => { plan = empty(); render(); };
+document.getElementById('btnPublish').onclick = () => { document.getElementById('status').textContent = 'Published v1'; toast(`Schedule published · ${STAFF.length} staff notified`); };
+
+// Seed: auto-filled week plus a few deliberate problems to demo the rules
+autoFill();
+plan.aoife[0] = 'AM';                    // unavailable day
+plan.liam[1] = 'PM'; plan.liam[2] = 'AM'; // clopening
+render();
+
+// Highlight current section in nav
+const links = [...document.querySelectorAll('nav a')];
+const io = new IntersectionObserver(es => es.forEach(en => {
+  if (en.isIntersecting) links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + en.target.id));
+}), { rootMargin: '-40% 0px -55% 0px' });
+document.querySelectorAll('section').forEach(s => io.observe(s));
+</script>
+</body>
+</html>

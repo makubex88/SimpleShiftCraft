@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: simpleshiftcraft
+      POSTGRES_USER: simpleshiftcraft
+      POSTGRES_PASSWORD: simpleshiftcraft
+    volumes:
+      - ./api/migrations:/docker-entrypoint-initdb.d:ro   # schema + seed run on first start
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "simpleshiftcraft"]
+      interval: 2s
+      retries: 15
+
+  api:
+    build: .
+    image: simpleshiftcraft-app
+    command: npm run start -w api
+    environment:
+      DATABASE_URL: postgres://simpleshiftcraft:simpleshiftcraft@db:5432/simpleshiftcraft
+    ports: ["4000:4000"]
+    depends_on:
+      db: { condition: service_healthy }
+
+  web:
+    build: .
+    image: simpleshiftcraft-app
+    command: npm run dev -w web -- --host
+    environment:
+      API_URL: http://api:4000
+    ports: ["5173:5173"]
+    depends_on: [api]
